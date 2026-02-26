@@ -1,11 +1,8 @@
-const Student = require('./student.model');
-const User = require('../users/user.model');
-const mongoose = require('mongoose');
+import Student from './student.model.js';
+import User from '../users/user.model.js';
+import mongoose from 'mongoose';
 
 class StudentService {
-  /**
-   * Generate unique student ID
-   */
   async generateStudentId(districtId) {
     const count = await Student.countDocuments({ districtId });
     const year = new Date().getFullYear().toString().slice(-2);
@@ -13,19 +10,21 @@ class StudentService {
     return `STU-${year}-${sequence}`;
   }
 
-  /**
-   * Create student (District-owned master record)
-   */
+  getCurrentAcademicYear() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    if (month >= 7) return `${year}-${year + 1}`;
+    return `${year - 1}-${year}`;
+  }
+
   async createStudent(data, createdBy) {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-      // 1. Generate student ID
-      const studentId =
-        data.studentId || (await this.generateStudentId(data.districtId));
+      const studentId = data.studentId || (await this.generateStudentId(data.districtId));
 
-      // 2. Create base user account
       const user = await User.create(
         [
           {
@@ -33,7 +32,7 @@ class StudentService {
             lastName: data.lastName,
             middleName: data.middleName,
             email: data.email,
-            password: data.password || `Temp@${Date.now()}`, // Temp password
+            password: data.password || `Temp@${Date.now()}`,
             phone: data.phone,
             roles: ['student'],
             primaryRole: 'student',
@@ -42,14 +41,13 @@ class StudentService {
             gender: data.gender,
             dateOfBirth: data.dateOfBirth,
             address: data.address,
-            status: 'pending', // Pending until enrollment approved
+            status: 'pending',
             createdBy,
           },
         ],
         { session }
       );
 
-      // 3. Create student profile (district-owned)
       const student = await Student.create(
         [
           {
@@ -91,43 +89,17 @@ class StudentService {
     }
   }
 
-  /**
-   * Get current academic year
-   */
-  getCurrentAcademicYear() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    // Academic year starts in August/September
-    if (month >= 7) {
-      return `${year}-${year + 1}`;
-    }
-    return `${year - 1}-${year}`;
-  }
-
-  /**
-   * Get all students (scoped)
-   */
   async getAllStudents(query, scope) {
     const {
-      page = 1,
-      limit = 10,
-      search,
-      enrollmentStatus,
-      gradeLevel,
-      classId,
-      academicYear,
-      sortBy = 'createdAt',
-      sortOrder = 'desc',
+      page = 1, limit = 10, search, enrollmentStatus,
+      gradeLevel, classId, academicYear,
+      sortBy = 'createdAt', sortOrder = 'desc',
     } = query;
 
     const filter = {};
-
-    // Scope filtering (district-first model)
     if (scope.districtId) filter.districtId = scope.districtId;
     if (scope.schoolId) filter.schoolId = scope.schoolId;
-    if (scope.classIds) filter.classId = { $in: scope.classIds }; // Teacher scope
-
+    if (scope.classIds) filter.classId = { $in: scope.classIds };
     if (enrollmentStatus) filter.enrollmentStatus = enrollmentStatus;
     if (gradeLevel) filter.gradeLevel = gradeLevel;
     if (classId) filter.classId = classId;
@@ -175,9 +147,6 @@ class StudentService {
     };
   }
 
-  /**
-   * Get student by ID
-   */
   async getStudentById(id, scope) {
     const filter = { _id: id };
     if (scope.districtId) filter.districtId = scope.districtId;
@@ -190,9 +159,6 @@ class StudentService {
       .populate('guardians.userId', 'firstName lastName email phone');
   }
 
-  /**
-   * Get student by user ID (for student self-access)
-   */
   async getStudentByUserId(userId) {
     return await Student.findOne({ userId })
       .populate('userId', '-password')
@@ -200,9 +166,6 @@ class StudentService {
       .populate('classId', 'name section gradeLevel');
   }
 
-  /**
-   * Update student
-   */
   async updateStudent(id, data, updatedBy, scope) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -215,7 +178,6 @@ class StudentService {
       const student = await Student.findOne(filter);
       if (!student) return null;
 
-      // Update user fields
       const userUpdateFields = {};
       ['firstName', 'lastName', 'middleName', 'phone', 'gender', 'dateOfBirth', 'address'].forEach(
         (field) => {
@@ -228,7 +190,6 @@ class StudentService {
         await User.findByIdAndUpdate(student.userId, userUpdateFields, { session });
       }
 
-      // Update student fields
       const studentUpdateFields = {};
       const studentFields = [
         'gradeLevel', 'classId', 'sectionId', 'academicYear',
@@ -244,8 +205,7 @@ class StudentService {
       studentUpdateFields.updatedBy = updatedBy;
 
       const updatedStudent = await Student.findByIdAndUpdate(
-        id,
-        studentUpdateFields,
+        id, studentUpdateFields,
         { new: true, session, runValidators: true }
       )
         .populate('userId', '-password')
@@ -262,9 +222,6 @@ class StudentService {
     }
   }
 
-  /**
-   * Approve enrollment (District-level action)
-   */
   async approveEnrollment(id, approvedBy, scope) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -277,19 +234,15 @@ class StudentService {
       if (!student) return null;
 
       if (!['pre_enrolled', 'pending_review'].includes(student.enrollmentStatus)) {
-        throw new Error(
-          `Cannot approve student with status: ${student.enrollmentStatus}`
-        );
+        throw new Error(`Cannot approve student with status: ${student.enrollmentStatus}`);
       }
 
-      // Activate user account
       await User.findByIdAndUpdate(
         student.userId,
         { status: 'active', updatedBy: approvedBy },
         { session }
       );
 
-      // Update enrollment status
       student.enrollmentStatus = 'active';
       student.updatedBy = approvedBy;
       await student.save({ session });
@@ -307,9 +260,6 @@ class StudentService {
     }
   }
 
-  /**
-   * Transfer student to another school (within district)
-   */
   async transferStudent(id, newSchoolId, reason, transferredBy, scope) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -321,15 +271,13 @@ class StudentService {
       const student = await Student.findOne(filter);
       if (!student) return null;
 
-      // Update school assignment (district still owns the record)
       student.schoolId = newSchoolId;
-      student.classId = null; // Reset class assignment
+      student.classId = null;
       student.sectionId = null;
       student.enrollmentStatus = 'active';
       student.enrollmentType = 'transfer';
       student.updatedBy = transferredBy;
 
-      // Update user's school scope
       await User.findByIdAndUpdate(
         student.userId,
         { schoolId: newSchoolId, updatedBy: transferredBy },
@@ -350,9 +298,6 @@ class StudentService {
     }
   }
 
-  /**
-   * Withdraw student
-   */
   async withdrawStudent(id, reason, withdrawnBy, scope) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -389,15 +334,10 @@ class StudentService {
     }
   }
 
-  /**
-   * Get student stats
-   */
   async getStudentStats(scope) {
     const matchStage = {};
-    if (scope.districtId)
-      matchStage.districtId = new mongoose.Types.ObjectId(scope.districtId);
-    if (scope.schoolId)
-      matchStage.schoolId = new mongoose.Types.ObjectId(scope.schoolId);
+    if (scope.districtId) matchStage.districtId = new mongoose.Types.ObjectId(scope.districtId);
+    if (scope.schoolId) matchStage.schoolId = new mongoose.Types.ObjectId(scope.schoolId);
 
     const [byStatus, byGrade, byEnrollmentType] = await Promise.all([
       Student.aggregate([
@@ -416,21 +356,12 @@ class StudentService {
     ]);
 
     return {
-      byStatus: byStatus.reduce((acc, c) => {
-        acc[c._id] = c.count;
-        return acc;
-      }, {}),
-      byGrade: byGrade.reduce((acc, c) => {
-        acc[c._id] = c.count;
-        return acc;
-      }, {}),
-      byEnrollmentType: byEnrollmentType.reduce((acc, c) => {
-        acc[c._id] = c.count;
-        return acc;
-      }, {}),
+      byStatus: byStatus.reduce((acc, c) => { acc[c._id] = c.count; return acc; }, {}),
+      byGrade: byGrade.reduce((acc, c) => { acc[c._id] = c.count; return acc; }, {}),
+      byEnrollmentType: byEnrollmentType.reduce((acc, c) => { acc[c._id] = c.count; return acc; }, {}),
       total: byStatus.reduce((sum, c) => sum + c.count, 0),
     };
   }
 }
 
-module.exports = new StudentService();
+export default new StudentService();

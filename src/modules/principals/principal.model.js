@@ -1,27 +1,27 @@
-// BACKEND/src/modules/teachers/teacher.model.js
+// BACKEND/src/modules/principals/principal.model.js
 
 import mongoose from 'mongoose';
 
-const teacherSchema = new mongoose.Schema(
+const principalSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'User reference is required'],
       unique: true,
-      // Removed: index: true
+      // Removed: index: true (unique auto-creates index)
     },
     districtId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'District',
       required: [true, 'District is required'],
-      // Removed: index: true
+      // Removed: index: true (covered by compound index below)
     },
     schoolId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'School',
       required: [true, 'School is required'],
-      // Removed: index: true
+      // Removed: index: true (covered by compound index below)
     },
     employeeId: {
       type: String,
@@ -29,34 +29,10 @@ const teacherSchema = new mongoose.Schema(
       sparse: true,
       trim: true,
     },
-    designation: {
+    title: {
       type: String,
-      enum: ['teacher', 'senior_teacher', 'lead_teacher', 'teaching_assistant', 'substitute_teacher'],
-      default: 'teacher',
-    },
-    subjects: [
-      {
-        subjectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Subject' },
-        subjectName: { type: String },
-        isPrimary: { type: Boolean, default: false },
-      },
-    ],
-    gradeLevels: [{ type: String }],
-    classAssignments: [
-      {
-        classId: { type: mongoose.Schema.Types.ObjectId, ref: 'Class' },
-        role: {
-          type: String,
-          enum: ['class_teacher', 'subject_teacher', 'assistant'],
-          default: 'subject_teacher',
-        },
-        assignedDate: { type: Date, default: Date.now },
-      },
-    ],
-    departmentId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Department',
-      default: null,
+      enum: ['principal', 'vice_principal', 'assistant_principal'],
+      default: 'principal',
     },
     certifications: [
       {
@@ -65,7 +41,6 @@ const teacherSchema = new mongoose.Schema(
         dateIssued: { type: Date },
         expiryDate: { type: Date },
         certificateNumber: { type: String },
-        state: { type: String, default: 'Michigan' },
       },
     ],
     educationBackground: [
@@ -76,37 +51,25 @@ const teacherSchema = new mongoose.Schema(
         yearCompleted: { type: Number },
       },
     ],
-    specializations: [{ type: String }],
     dateOfJoining: {
       type: Date,
       required: [true, 'Date of joining is required'],
     },
     dateOfLeaving: { type: Date, default: null },
     yearsOfExperience: { type: Number, min: 0 },
-    contractType: {
-      type: String,
-      enum: ['full_time', 'part_time', 'contract', 'substitute', 'intern'],
-      default: 'full_time',
-    },
-    previousEmployment: [
+    previousSchools: [
       {
-        organization: { type: String },
+        schoolName: { type: String },
         position: { type: String },
         fromDate: { type: Date },
         toDate: { type: Date },
       },
     ],
-    maxClassesPerDay: { type: Number, default: 6 },
-    maxClassesPerWeek: { type: Number, default: 30 },
-    availablePeriods: [
-      {
-        day: {
-          type: String,
-          enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
-        },
-        periods: [{ type: Number }],
-      },
-    ],
+    contractType: {
+      type: String,
+      enum: ['full_time', 'part_time', 'contract', 'interim'],
+      default: 'full_time',
+    },
     emergencyContact: {
       name: { type: String },
       relationship: { type: String },
@@ -115,7 +78,7 @@ const teacherSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['active', 'inactive', 'on_leave', 'transferred', 'terminated', 'suspended'],
+      enum: ['active', 'inactive', 'on_leave', 'transferred', 'terminated'],
       default: 'active',
     },
     notes: {
@@ -133,25 +96,23 @@ const teacherSchema = new mongoose.Schema(
 );
 
 // Only non-duplicate indexes
-teacherSchema.index({ districtId: 1, schoolId: 1 });
-teacherSchema.index({ status: 1 });
-teacherSchema.index({ 'classAssignments.classId': 1 });
-teacherSchema.index({ 'subjects.subjectId': 1 });
+principalSchema.index({ districtId: 1, schoolId: 1 });
+principalSchema.index({ status: 1 });
 // userId already indexed via unique: true
 
-teacherSchema.virtual('user', {
+principalSchema.virtual('user', {
   ref: 'User',
   localField: 'userId',
   foreignField: '_id',
   justOne: true,
 });
 
-teacherSchema.virtual('school', {
+principalSchema.virtual('school', {
   ref: 'School',
   localField: 'schoolId',
   foreignField: '_id',
   justOne: true,
 });
 
-const Teacher = mongoose.model('Teacher', teacherSchema);
-export default Teacher;
+const Principal = mongoose.model('Principal', principalSchema);
+export default Principal;

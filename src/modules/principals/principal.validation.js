@@ -1,6 +1,8 @@
+// BACKEND/src/modules/principals/principal.validation.js
+
 import Joi from 'joi';
 
-export const createTeacherSchema = Joi.object({
+export const createPrincipalSchema = Joi.object({
   firstName: Joi.string().trim().max(50).required(),
   lastName: Joi.string().trim().max(50).required(),
   middleName: Joi.string().trim().max(50).allow('', null),
@@ -17,28 +19,20 @@ export const createTeacherSchema = Joi.object({
     country: Joi.string().default('USA'),
   }),
 
-  districtId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required(),
-  schoolId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required(),
+  districtId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required()
+    .messages({ 'string.pattern.base': 'Invalid district ID' }),
+  schoolId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required()
+    .messages({ 'string.pattern.base': 'Invalid school ID' }),
 
   employeeId: Joi.string().trim().allow('', null),
-  designation: Joi.string()
-    .valid('teacher', 'senior_teacher', 'lead_teacher', 'teaching_assistant', 'substitute_teacher')
-    .default('teacher'),
-  subjects: Joi.array().items(
-    Joi.object({
-      subjectId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).allow(null),
-      subjectName: Joi.string().required(),
-      isPrimary: Joi.boolean().default(false),
-    })
-  ),
-  gradeLevels: Joi.array().items(Joi.string()),
-  departmentId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).allow(null),
+  title: Joi.string()
+    .valid('principal', 'vice_principal', 'assistant_principal')
+    .default('principal'),
   dateOfJoining: Joi.date().iso().required(),
   yearsOfExperience: Joi.number().min(0).allow(null),
   contractType: Joi.string()
-    .valid('full_time', 'part_time', 'contract', 'substitute', 'intern')
+    .valid('full_time', 'part_time', 'contract', 'interim')
     .default('full_time'),
-  specializations: Joi.array().items(Joi.string()),
 
   certifications: Joi.array().items(
     Joi.object({
@@ -47,7 +41,6 @@ export const createTeacherSchema = Joi.object({
       dateIssued: Joi.date().iso(),
       expiryDate: Joi.date().iso(),
       certificateNumber: Joi.string().allow('', null),
-      state: Joi.string().default('Michigan'),
     })
   ),
 
@@ -60,17 +53,14 @@ export const createTeacherSchema = Joi.object({
     })
   ),
 
-  previousEmployment: Joi.array().items(
+  previousSchools: Joi.array().items(
     Joi.object({
-      organization: Joi.string().required(),
+      schoolName: Joi.string().required(),
       position: Joi.string().allow('', null),
       fromDate: Joi.date().iso(),
       toDate: Joi.date().iso(),
     })
   ),
-
-  maxClassesPerDay: Joi.number().min(1).max(12).default(6),
-  maxClassesPerWeek: Joi.number().min(1).max(60).default(30),
 
   emergencyContact: Joi.object({
     name: Joi.string().allow('', null),
@@ -82,50 +72,40 @@ export const createTeacherSchema = Joi.object({
   notes: Joi.string().max(1000).allow('', null),
 });
 
-export const updateTeacherSchema = Joi.object({
+export const updatePrincipalSchema = Joi.object({
   firstName: Joi.string().trim().max(50),
   lastName: Joi.string().trim().max(50),
   middleName: Joi.string().trim().max(50).allow('', null),
   phone: Joi.string().trim().allow('', null),
   gender: Joi.string().valid('male', 'female', 'other', 'prefer_not_to_say'),
   dateOfBirth: Joi.date().iso().max('now'),
-  address: Joi.object(),
+  address: Joi.object({
+    street: Joi.string().allow('', null),
+    city: Joi.string().allow('', null),
+    state: Joi.string(),
+    zipCode: Joi.string().allow('', null),
+    country: Joi.string(),
+  }),
   employeeId: Joi.string().trim().allow('', null),
-  designation: Joi.string().valid('teacher', 'senior_teacher', 'lead_teacher', 'teaching_assistant', 'substitute_teacher'),
-  subjects: Joi.array(),
-  gradeLevels: Joi.array().items(Joi.string()),
-  departmentId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).allow(null),
+  title: Joi.string().valid('principal', 'vice_principal', 'assistant_principal'),
   dateOfJoining: Joi.date().iso(),
   dateOfLeaving: Joi.date().iso().allow(null),
   yearsOfExperience: Joi.number().min(0),
-  contractType: Joi.string().valid('full_time', 'part_time', 'contract', 'substitute', 'intern'),
-  specializations: Joi.array().items(Joi.string()),
+  contractType: Joi.string().valid('full_time', 'part_time', 'contract', 'interim'),
   certifications: Joi.array(),
   educationBackground: Joi.array(),
-  previousEmployment: Joi.array(),
-  maxClassesPerDay: Joi.number().min(1).max(12),
-  maxClassesPerWeek: Joi.number().min(1).max(60),
-  availablePeriods: Joi.array(),
+  previousSchools: Joi.array(),
   emergencyContact: Joi.object(),
-  status: Joi.string().valid('active', 'inactive', 'on_leave', 'transferred', 'terminated', 'suspended'),
+  status: Joi.string().valid('active', 'inactive', 'on_leave', 'transferred', 'terminated'),
   notes: Joi.string().max(1000).allow('', null),
 }).min(1);
 
-export const assignClassSchema = Joi.object({
-  classId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required(),
-  role: Joi.string()
-    .valid('class_teacher', 'subject_teacher', 'assistant')
-    .default('subject_teacher'),
-});
-
-export const queryTeacherSchema = Joi.object({
+export const queryPrincipalSchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(10),
   search: Joi.string().trim().allow('', null),
-  status: Joi.string().valid('active', 'inactive', 'on_leave', 'transferred', 'terminated', 'suspended'),
-  designation: Joi.string().valid('teacher', 'senior_teacher', 'lead_teacher', 'teaching_assistant', 'substitute_teacher'),
-  subject: Joi.string().trim().allow('', null),
-  gradeLevel: Joi.string().trim().allow('', null),
+  status: Joi.string().valid('active', 'inactive', 'on_leave', 'transferred', 'terminated'),
+  title: Joi.string().valid('principal', 'vice_principal', 'assistant_principal'),
   sortBy: Joi.string().valid('createdAt', 'dateOfJoining', 'status').default('createdAt'),
   sortOrder: Joi.string().valid('asc', 'desc').default('desc'),
 });

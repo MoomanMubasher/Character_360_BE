@@ -1,7 +1,6 @@
+import { sendError } from '../utils/response.js';
 
-const { sendError } = require('../utils/response');
-
-const validate = (schema, source = 'body') => {
+export const validate = (schema, source = 'body') => {
   return (req, res, next) => {
     const dataToValidate = source === 'query' ? req.query : req.body;
 
@@ -20,7 +19,6 @@ const validate = (schema, source = 'body') => {
       return sendError(res, 400, 'Validation failed', errors);
     }
 
-    // Replace with validated/sanitized data
     if (source === 'query') {
       req.query = value;
     } else {
@@ -30,5 +28,3 @@ const validate = (schema, source = 'body') => {
     next();
   };
 };
-
-module.exports = { validate };

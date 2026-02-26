@@ -1,23 +1,15 @@
-// BACKEND/src/modules/teachers/teacher.service.js
-
-const Teacher = require('./teacher.model');
-const User = require('../users/user.model');
-const mongoose = require('mongoose');
+import Teacher from './teacher.model.js';
+import User from '../users/user.model.js';
+import mongoose from 'mongoose';
 
 class TeacherService {
- 
   async createTeacher(data, createdBy) {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-      // 1. Determine role
-      const role =
-        data.designation === 'teaching_assistant'
-          ? 'teaching_assistant'
-          : 'teacher';
+      const role = data.designation === 'teaching_assistant' ? 'teaching_assistant' : 'teacher';
 
-      // 2. Create base user
       const user = await User.create(
         [
           {
@@ -41,7 +33,6 @@ class TeacherService {
         { session }
       );
 
-      // 3. Create teacher profile
       const teacher = await Teacher.create(
         [
           {
@@ -83,7 +74,6 @@ class TeacherService {
     }
   }
 
- 
   async getAllTeachers(query, scope) {
     const {
       page = 1,
@@ -98,7 +88,6 @@ class TeacherService {
     } = query;
 
     const filter = {};
-
     if (scope.districtId) filter.districtId = scope.districtId;
     if (scope.schoolId) filter.schoolId = scope.schoolId;
     if (status) filter.status = status;
@@ -146,7 +135,6 @@ class TeacherService {
     };
   }
 
- 
   async getTeacherById(id, scope) {
     const filter = { _id: id };
     if (scope.districtId) filter.districtId = scope.districtId;
@@ -158,7 +146,6 @@ class TeacherService {
       .populate('classAssignments.classId', 'name section gradeLevel');
   }
 
- 
   async getTeacherByUserId(userId) {
     return await Teacher.findOne({ userId })
       .populate('userId', '-password')
@@ -166,7 +153,6 @@ class TeacherService {
       .populate('classAssignments.classId', 'name section gradeLevel');
   }
 
-  
   async updateTeacher(id, data, updatedBy, scope) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -179,7 +165,6 @@ class TeacherService {
       const teacher = await Teacher.findOne(filter);
       if (!teacher) return null;
 
-      // Update user fields
       const userUpdateFields = {};
       ['firstName', 'lastName', 'middleName', 'phone', 'gender', 'dateOfBirth', 'address'].forEach(
         (field) => {
@@ -192,7 +177,6 @@ class TeacherService {
         await User.findByIdAndUpdate(teacher.userId, userUpdateFields, { session });
       }
 
-      // Update teacher fields
       const teacherUpdateFields = {};
       const teacherFields = [
         'employeeId', 'designation', 'subjects', 'gradeLevels',
@@ -227,7 +211,6 @@ class TeacherService {
     }
   }
 
- 
   async assignToClass(teacherId, classData, updatedBy, scope) {
     const filter = { _id: teacherId };
     if (scope.schoolId) filter.schoolId = scope.schoolId;
@@ -235,7 +218,6 @@ class TeacherService {
     const teacher = await Teacher.findOne(filter);
     if (!teacher) return null;
 
-    // Check if already assigned
     const alreadyAssigned = teacher.classAssignments.some(
       (a) => a.classId.toString() === classData.classId
     );
@@ -258,7 +240,6 @@ class TeacherService {
       .populate('classAssignments.classId', 'name section gradeLevel');
   }
 
-  
   async removeFromClass(teacherId, classId, updatedBy, scope) {
     const filter = { _id: teacherId };
     if (scope.schoolId) filter.schoolId = scope.schoolId;
@@ -278,7 +259,6 @@ class TeacherService {
       .populate('classAssignments.classId', 'name section gradeLevel');
   }
 
-  
   async deactivateTeacher(id, updatedBy, scope) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -315,7 +295,6 @@ class TeacherService {
     }
   }
 
-  
   async getTeachersBySchool(schoolId, query) {
     const { status = 'active' } = query;
     return await Teacher.find({ schoolId, status })
@@ -324,44 +303,23 @@ class TeacherService {
       .lean();
   }
 
- 
   async getTeacherStats(schoolId) {
-    const stats = await Teacher.aggregate([
-      { $match: { schoolId: new mongoose.Types.ObjectId(schoolId) } },
-      {
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-
-    const designationStats = await Teacher.aggregate([
-      {
-        $match: {
-          schoolId: new mongoose.Types.ObjectId(schoolId),
-          status: 'active',
-        },
-      },
-      {
-        $group: {
-          _id: '$designation',
-          count: { $sum: 1 },
-        },
-      },
+    const [statusStats, designationStats] = await Promise.all([
+      Teacher.aggregate([
+        { $match: { schoolId: new mongoose.Types.ObjectId(schoolId) } },
+        { $group: { _id: '$status', count: { $sum: 1 } } },
+      ]),
+      Teacher.aggregate([
+        { $match: { schoolId: new mongoose.Types.ObjectId(schoolId), status: 'active' } },
+        { $group: { _id: '$designation', count: { $sum: 1 } } },
+      ]),
     ]);
 
     return {
-      byStatus: stats.reduce((acc, curr) => {
-        acc[curr._id] = curr.count;
-        return acc;
-      }, {}),
-      byDesignation: designationStats.reduce((acc, curr) => {
-        acc[curr._id] = curr.count;
-        return acc;
-      }, {}),
+      byStatus: statusStats.reduce((acc, c) => { acc[c._id] = c.count; return acc; }, {}),
+      byDesignation: designationStats.reduce((acc, c) => { acc[c._id] = c.count; return acc; }, {}),
     };
   }
 }
 
-module.exports = new TeacherService();
+export default new TeacherService();

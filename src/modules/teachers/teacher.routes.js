@@ -1,26 +1,21 @@
-const express = require('express');
-const router = express.Router();
-const teacherController = require('./teacher.controller');
-const { authenticate } = require('../../middlewares/auth.middleware');
-const { authorize } = require('../../middlewares/rbac.middleware');
-const { validate } = require('../../middlewares/validate.middleware');
-const {
+import { Router } from 'express';
+import teacherController from './teacher.controller.js';
+import { authenticate } from '../../middlewares/auth.middleware.js';
+import { authorize } from '../../middlewares/rbac.middleware.js';
+import { validate } from '../../middlewares/validate.middleware.js';
+import {
   createTeacherSchema,
   updateTeacherSchema,
   assignClassSchema,
   queryTeacherSchema,
-} = require('./teacher.validation');
+} from './teacher.validation.js';
+
+const router = Router();
 
 router.use(authenticate);
 
-// ─── Teacher's Own Profile ───────────────────────────
-router.get(
-  '/me',
-  authorize('teacher', 'teaching_assistant'),
-  teacherController.getMyProfile
-);
+router.get('/me', authorize('teacher', 'teaching_assistant'), teacherController.getMyProfile);
 
-// ─── CRUD Operations ─────────────────────────────────
 router.post(
   '/',
   authorize('super_admin', 'district_admin', 'school_admin'),
@@ -60,7 +55,6 @@ router.put(
   teacherController.update
 );
 
-// ─── Class Assignment ────────────────────────────────
 router.post(
   '/:id/assign-class',
   authorize('super_admin', 'district_admin', 'school_admin'),
@@ -74,11 +68,10 @@ router.delete(
   teacherController.removeClass
 );
 
-// ─── Deactivate ──────────────────────────────────────
 router.patch(
   '/:id/deactivate',
   authorize('super_admin', 'district_admin', 'school_admin'),
   teacherController.deactivate
 );
 
-module.exports = router;
+export default router;

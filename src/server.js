@@ -1,20 +1,30 @@
-import dotenv from "dotenv";
-import mongoose from "mongoose";
-import app from "./app.js";
+// BACKEND/src/server.js
+
+import app from './app.js';
+import connectDB from './config/db.js';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8000;
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("MongoDB connected");
-    app.listen(PORT, () =>
-      console.log(`Server running on port ${PORT}`)
-    );
-  })
-  .catch((err) => {
-    console.error("DB connection failed", err);
+const startServer = async () => {
+  try {
+    // Connect to MongoDB
+    await connectDB();
+
+    // Start Express server
+    app.listen(PORT, () => {
+      console.log(`\n🚀 Character360 API Server`);
+      console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`   Port: ${PORT}`);
+      console.log(`   URL: http://localhost:${PORT}`);
+      console.log(`   Health: http://localhost:${PORT}/api/v1/health\n`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
     process.exit(1);
-  });
+  }
+};
+
+startServer();

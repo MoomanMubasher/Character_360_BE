@@ -1,45 +1,40 @@
-const mongoose = require('mongoose');
+// BACKEND/src/modules/students/student.model.js
+
+import mongoose from 'mongoose';
 
 const studentSchema = new mongoose.Schema(
   {
-    // ─── Link to Base User ──────────────────────────
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'User reference is required'],
       unique: true,
-      index: true,
+      // Removed: index: true
     },
-
-    // ─── Multi-Tenant Scoping (District-Owned) ──────
     districtId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'District',
       required: [true, 'District is required'],
-      index: true,
+      // Removed: index: true
     },
     schoolId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'School',
       required: [true, 'School assignment is required'],
-      index: true,
+      // Removed: index: true
     },
-
-    // ─── Student Identity ───────────────────────────
     studentId: {
       type: String,
-      unique: true,
+      unique: true, // Auto-creates index
       required: [true, 'Student ID is required'],
       trim: true,
     },
     stateStudentId: {
-      type: String, // Michigan state student identifier (MSID)
+      type: String,
       unique: true,
       sparse: true,
       trim: true,
     },
-
-    // ─── Academic Info ──────────────────────────────
     gradeLevel: {
       type: String,
       required: [true, 'Grade level is required'],
@@ -56,7 +51,7 @@ const studentSchema = new mongoose.Schema(
       default: null,
     },
     academicYear: {
-      type: String, // e.g., '2024-2025'
+      type: String,
       required: true,
     },
     enrollmentDate: {
@@ -68,8 +63,6 @@ const studentSchema = new mongoose.Schema(
       enum: ['new', 'transfer', 're_enrollment', 'mid_year'],
       default: 'new',
     },
-
-    // ─── Previous School (for transfers) ────────────
     previousSchool: {
       name: { type: String },
       address: { type: String },
@@ -77,14 +70,9 @@ const studentSchema = new mongoose.Schema(
       transferDate: { type: Date },
       reasonForTransfer: { type: String },
     },
-
-    // ─── Parent/Guardian Info ───────────────────────
     guardians: [
       {
-        userId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'User',
-        },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         relationship: {
           type: String,
           enum: ['mother', 'father', 'guardian', 'grandparent', 'other'],
@@ -114,8 +102,6 @@ const studentSchema = new mongoose.Schema(
         },
       },
     ],
-
-    // ─── Health & Medical ───────────────────────────
     medical: {
       bloodGroup: { type: String },
       allergies: [{ type: String }],
@@ -127,7 +113,7 @@ const studentSchema = new mongoose.Schema(
           prescribedBy: { type: String },
         },
       ],
-      conditions: [{ type: String }], // e.g., 'Asthma', 'Diabetes'
+      conditions: [{ type: String }],
       immunizationUpToDate: { type: Boolean, default: false },
       lastPhysicalExam: { type: Date },
       insuranceProvider: { type: String },
@@ -135,11 +121,9 @@ const studentSchema = new mongoose.Schema(
       doctorName: { type: String },
       doctorPhone: { type: String },
       specialNeeds: { type: String },
-      hasIEP: { type: Boolean, default: false }, // Individualized Education Program
+      hasIEP: { type: Boolean, default: false },
       has504Plan: { type: Boolean, default: false },
     },
-
-    // ─── Transportation ─────────────────────────────
     transportation: {
       mode: {
         type: String,
@@ -151,8 +135,6 @@ const studentSchema = new mongoose.Schema(
       pickupTime: { type: String },
       dropoffTime: { type: String },
     },
-
-    // ─── Meal Plan ──────────────────────────────────
     mealPlan: {
       type: {
         type: String,
@@ -161,96 +143,59 @@ const studentSchema = new mongoose.Schema(
       },
       dietaryRestrictions: [{ type: String }],
     },
-
-    // ─── Demographics (for state reporting) ─────────
     demographics: {
       ethnicity: { type: String },
       race: [{ type: String }],
       primaryLanguage: { type: String, default: 'English' },
       homeLanguage: { type: String, default: 'English' },
-      isELL: { type: Boolean, default: false }, // English Language Learner
+      isELL: { type: Boolean, default: false },
       birthCountry: { type: String, default: 'USA' },
       citizenship: { type: String, default: 'US Citizen' },
     },
-
-    // ─── Enrollment Status ──────────────────────────
     enrollmentStatus: {
       type: String,
       enum: [
-        'pre_enrolled',    // Application submitted
-        'pending_review',  // Under district review
-        'approved',        // District approved
-        'active',          // Currently enrolled and attending
-        'inactive',        // Temporarily inactive
-        'withdrawn',       // Voluntarily withdrawn
-        'transferred',     // Transferred to another school
-        'graduated',       // Completed school
-        'expelled',        // Expelled
-        'suspended',       // Currently suspended
+        'pre_enrolled', 'pending_review', 'approved', 'active',
+        'inactive', 'withdrawn', 'transferred', 'graduated',
+        'expelled', 'suspended',
       ],
       default: 'pre_enrolled',
     },
     withdrawalDate: { type: Date },
     withdrawalReason: { type: String },
     graduationDate: { type: Date },
-
-    // ─── Status History ─────────────────────────────
     statusHistory: [
       {
         status: { type: String },
         date: { type: Date, default: Date.now },
         reason: { type: String },
-        changedBy: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'User',
-        },
+        changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       },
     ],
-
-    // ─── Documents ──────────────────────────────────
     documents: [
       {
         type: {
           type: String,
           enum: [
-            'birth_certificate',
-            'immunization_record',
-            'proof_of_residency',
-            'previous_report_card',
-            'iep_document',
-            'custody_order',
-            'medical_record',
-            'other',
+            'birth_certificate', 'immunization_record', 'proof_of_residency',
+            'previous_report_card', 'iep_document', 'custody_order',
+            'medical_record', 'other',
           ],
         },
         fileName: { type: String },
         fileUrl: { type: String },
         uploadedAt: { type: Date, default: Date.now },
-        uploadedBy: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'User',
-        },
+        uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         verified: { type: Boolean, default: false },
-        verifiedBy: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'User',
-        },
+        verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       },
     ],
-
-    // ─── Metadata ───────────────────────────────────
     notes: {
       type: String,
       maxlength: [2000, 'Notes cannot exceed 2000 characters'],
     },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
-    updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   {
     timestamps: true,
@@ -259,14 +204,15 @@ const studentSchema = new mongoose.Schema(
   }
 );
 
-// ─── Indexes ──────────────────────────────────────────
-studentSchema.index({ districtId: 1, schoolId: 1 });
+// Only non-duplicate indexes
 studentSchema.index({ districtId: 1, enrollmentStatus: 1 });
 studentSchema.index({ schoolId: 1, gradeLevel: 1 });
 studentSchema.index({ classId: 1 });
 studentSchema.index({ 'guardians.userId': 1 });
-studentSchema.index({ studentId: 1 }, { unique: true });
 studentSchema.index({ enrollmentStatus: 1 });
+// studentId already indexed via unique: true
+// userId already indexed via unique: true
+// districtId + schoolId covered by compound indexes above
 
 // ─── Virtuals ─────────────────────────────────────────
 studentSchema.virtual('user', {
@@ -294,20 +240,8 @@ studentSchema.virtual('primaryGuardian').get(function () {
   return this.guardians?.find((g) => g.isPrimary) || this.guardians?.[0];
 });
 
-studentSchema.virtual('age').get(function () {
-  if (!this.userId?.dateOfBirth) return null;
-  const today = new Date();
-  const birth = new Date(this.userId.dateOfBirth);
-  let age = today.getFullYear() - birth.getFullYear();
-  const monthDiff = today.getMonth() - birth.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-    age--;
-  }
-  return age;
-});
-
-// ─── Pre-save: Track status changes ──────────────────
-studentSchema.pre('save', function (next) {
+// ─── Pre-save: Track status changes (Mongoose 8 compatible) ──
+studentSchema.pre('save', function () {
   if (this.isModified('enrollmentStatus')) {
     this.statusHistory.push({
       status: this.enrollmentStatus,
@@ -315,8 +249,7 @@ studentSchema.pre('save', function (next) {
       changedBy: this.updatedBy,
     });
   }
-  next();
 });
 
 const Student = mongoose.model('Student', studentSchema);
-module.exports = Student;
+export default Student;

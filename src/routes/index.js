@@ -1,29 +1,18 @@
-// import { Router } from "express";
-// import authRoutes from "../modules/auth/auth.routes.js";
+// BACKEND/src/routes/index.js
 
-// const router = Router();
+import { Router } from 'express';
+import authRoutes from '../modules/auth/auth.routes.js';
+import principalRoutes from '../modules/principals/principal.routes.js';
+import teacherRoutes from '../modules/teachers/teacher.routes.js';
+import studentRoutes from '../modules/students/student.routes.js';
 
-// router.use("/auth", authRoutes);
+const router = Router();
 
-// export default router;
-
-// // BACKEND/src/routes/index.js
-
-const express = require('express');
-const router = express.Router();
-
-// ─── Module Routes ───────────────────────────────────
-const authRoutes = require('../modules/auth/auth.routes');
-// const principalRoutes = require('../modules/principals/principal.routes');
-const teacherRoutes = require('../modules/teachers/teacher.routes');
-const studentRoutes = require('../modules/students/student.routes');
-
-// ─── API Version Prefix ─────────────────────────────
 const API_V1 = '/api/v1';
 
 // ─── Mount Routes ────────────────────────────────────
 router.use(`${API_V1}/auth`, authRoutes);
-// router.use(`${API_V1}/principals`, principalRoutes);
+router.use(`${API_V1}/principals`, principalRoutes);
 router.use(`${API_V1}/teachers`, teacherRoutes);
 router.use(`${API_V1}/students`, studentRoutes);
 
@@ -37,4 +26,4 @@ router.get(`${API_V1}/health`, (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;

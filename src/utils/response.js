@@ -1,11 +1,10 @@
-const sendSuccess = (res, statusCode, message, data = null) => {
+export const sendSuccess = (res, statusCode, message, data = null) => {
   const response = {
     success: true,
     message,
   };
 
   if (data !== null) {
-    // Handle paginated responses
     if (data.pagination) {
       response.data = data.data;
       response.pagination = data.pagination;
@@ -17,7 +16,7 @@ const sendSuccess = (res, statusCode, message, data = null) => {
   return res.status(statusCode).json(response);
 };
 
-const sendError = (res, statusCode, message, errors = null) => {
+export const sendError = (res, statusCode, message, errors = null) => {
   const response = {
     success: false,
     message,
@@ -29,5 +28,3 @@ const sendError = (res, statusCode, message, errors = null) => {
 
   return res.status(statusCode).json(response);
 };
-
-module.exports = { sendSuccess, sendError };

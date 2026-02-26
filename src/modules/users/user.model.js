@@ -1,7 +1,7 @@
 // BACKEND/src/modules/users/user.model.js
 
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema(
   {
@@ -30,12 +30,13 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
       match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
+      // Removed: index: true (unique already creates an index)
     },
     password: {
       type: String,
       required: [true, 'Password is required'],
       minlength: [8, 'Password must be at least 8 characters'],
-      select: false, // Never return password in queries
+      select: false,
     },
     phone: {
       type: String,
@@ -49,9 +50,9 @@ const userSchema = new mongoose.Schema(
         enum: [
           'super_admin',
           'district_admin',
-          'school_admin',        // Principal
+          'school_admin',
           'vice_principal',
-          'office_admin',        // Secretary/Registrar
+          'office_admin',
           'department_head',
           'teacher',
           'teaching_assistant',
@@ -75,36 +76,27 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Primary role is required'],
     },
-    permissions: [
-      {
-        type: String, // e.g., 'students:read', 'grades:write'
-      },
-    ],
+    permissions: [{ type: String }],
     customPermissions: {
-      granted: [{ type: String }], // Extra permissions beyond role defaults
-      revoked: [{ type: String }], // Permissions removed from role defaults
+      granted: [{ type: String }],
+      revoked: [{ type: String }],
     },
 
     // ─── Multi-Tenant Scoping ───────────────────────
     districtId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'District',
-      index: true,
+      // Removed: index: true (covered by compound index below)
     },
     schoolId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'School',
-      index: true,
+      // Removed: index: true (covered by compound index below)
     },
 
     // ─── Profile ────────────────────────────────────
-    avatar: {
-      type: String,
-      default: null,
-    },
-    dateOfBirth: {
-      type: Date,
-    },
+    avatar: { type: String, default: null },
+    dateOfBirth: { type: Date },
     gender: {
       type: String,
       enum: ['male', 'female', 'other', 'prefer_not_to_say'],
@@ -123,34 +115,15 @@ const userSchema = new mongoose.Schema(
       enum: ['active', 'inactive', 'suspended', 'pending', 'archived'],
       default: 'pending',
     },
-    isEmailVerified: {
-      type: Boolean,
-      default: false,
-    },
-    lastLogin: {
-      type: Date,
-    },
-    passwordChangedAt: {
-      type: Date,
-    },
-    passwordResetToken: {
-      type: String,
-      select: false,
-    },
-    passwordResetExpires: {
-      type: Date,
-      select: false,
-    },
+    isEmailVerified: { type: Boolean, default: false },
+    lastLogin: { type: Date },
+    passwordChangedAt: { type: Date },
+    passwordResetToken: { type: String, select: false },
+    passwordResetExpires: { type: Date, select: false },
 
     // ─── Metadata ───────────────────────────────────
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
-    updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   {
     timestamps: true,
@@ -159,11 +132,11 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// ─── Indexes ──────────────────────────────────────────
+// ─── Indexes (no duplicates) ──────────────────────────
 userSchema.index({ districtId: 1, schoolId: 1 });
 userSchema.index({ roles: 1 });
 userSchema.index({ status: 1 });
-userSchema.index({ email: 1 }, { unique: true });
+// Note: email already has unique:true which auto-creates index
 
 // ─── Virtual: Full Name ──────────────────────────────
 userSchema.virtual('fullName').get(function () {
@@ -193,14 +166,14 @@ userSchema.virtual('principalProfile', {
   justOne: true,
 });
 
-// ─── Pre-save: Hash Password ─────────────────────────
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+// ─── Pre-save: Hash Password (Mongoose 8 compatible) ──
+userSchema.pre('save', async function () {
+  // Only hash if password was modified
+  if (!this.isModified('password')) return;
 
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
-  this.passwordChangedAt = Date.now() - 1000;
-  next();
+  this.passwordChangedAt = new Date(Date.now() - 1000);
 });
 
 // ─── Methods ─────────────────────────────────────────
@@ -217,11 +190,8 @@ userSchema.methods.hasAnyRole = function (roles) {
 };
 
 userSchema.methods.hasPermission = function (permission) {
-  // Check if revoked first
   if (this.customPermissions?.revoked?.includes(permission)) return false;
-  // Check granted custom permissions
   if (this.customPermissions?.granted?.includes(permission)) return true;
-  // Check base permissions
   return this.permissions.includes(permission);
 };
 
@@ -237,4 +207,4 @@ userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
 };
 
 const User = mongoose.model('User', userSchema);
-module.exports = User;
+export default User;

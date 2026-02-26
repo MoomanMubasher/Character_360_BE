@@ -1,11 +1,10 @@
-const Joi = require('joi');
+
+import Joi from 'joi';
 
 const GRADE_LEVELS = ['PK', 'K', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
 
 const guardianSchema = Joi.object({
-  relationship: Joi.string()
-    .valid('mother', 'father', 'guardian', 'grandparent', 'other')
-    .required(),
+  relationship: Joi.string().valid('mother', 'father', 'guardian', 'grandparent', 'other').required(),
   firstName: Joi.string().trim().max(50).required(),
   lastName: Joi.string().trim().max(50).required(),
   email: Joi.string().email().allow('', null),
@@ -23,17 +22,14 @@ const guardianSchema = Joi.object({
     country: Joi.string().default('USA'),
   }),
   livesWithStudent: Joi.boolean().default(true),
-  custodyRights: Joi.string()
-    .valid('full', 'joint', 'none', 'not_applicable')
-    .default('not_applicable'),
+  custodyRights: Joi.string().valid('full', 'joint', 'none', 'not_applicable').default('not_applicable'),
 });
 
-const createStudentSchema = Joi.object({
-  // User fields
+export const createStudentSchema = Joi.object({
   firstName: Joi.string().trim().max(50).required(),
   lastName: Joi.string().trim().max(50).required(),
   middleName: Joi.string().trim().max(50).allow('', null),
-  email: Joi.string().email().allow('', null), // Students may not have email
+  email: Joi.string().email().allow('', null),
   password: Joi.string().min(8).max(128).allow('', null),
   phone: Joi.string().trim().allow('', null),
   gender: Joi.string().valid('male', 'female', 'other', 'prefer_not_to_say'),
@@ -46,21 +42,17 @@ const createStudentSchema = Joi.object({
     country: Joi.string().default('USA'),
   }),
 
-  // Scoping
   districtId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required(),
   schoolId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required(),
 
-  // Student-specific
-  studentId: Joi.string().trim().allow('', null), // Auto-generated if not provided
+  studentId: Joi.string().trim().allow('', null),
   stateStudentId: Joi.string().trim().allow('', null),
   gradeLevel: Joi.string().valid(...GRADE_LEVELS).required(),
   classId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).allow(null),
   sectionId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).allow(null),
-  academicYear: Joi.string().allow('', null), // Auto-generated if not provided
+  academicYear: Joi.string().allow('', null),
   enrollmentDate: Joi.date().iso(),
-  enrollmentType: Joi.string()
-    .valid('new', 'transfer', 're_enrollment', 'mid_year')
-    .default('new'),
+  enrollmentType: Joi.string().valid('new', 'transfer', 're_enrollment', 'mid_year').default('new'),
 
   previousSchool: Joi.object({
     name: Joi.string().allow('', null),
@@ -114,7 +106,7 @@ const createStudentSchema = Joi.object({
   notes: Joi.string().max(2000).allow('', null),
 });
 
-const updateStudentSchema = Joi.object({
+export const updateStudentSchema = Joi.object({
   firstName: Joi.string().trim().max(50),
   lastName: Joi.string().trim().max(50),
   middleName: Joi.string().trim().max(50).allow('', null),
@@ -140,16 +132,16 @@ const updateStudentSchema = Joi.object({
   notes: Joi.string().max(2000).allow('', null),
 }).min(1);
 
-const transferStudentSchema = Joi.object({
+export const transferStudentSchema = Joi.object({
   newSchoolId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required(),
   reason: Joi.string().max(500).required(),
 });
 
-const withdrawStudentSchema = Joi.object({
+export const withdrawStudentSchema = Joi.object({
   reason: Joi.string().max(500).required(),
 });
 
-const queryStudentSchema = Joi.object({
+export const queryStudentSchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(10),
   search: Joi.string().trim().allow('', null),
@@ -161,16 +153,6 @@ const queryStudentSchema = Joi.object({
   gradeLevel: Joi.string().valid(...GRADE_LEVELS),
   classId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).allow(null),
   academicYear: Joi.string(),
-  sortBy: Joi.string()
-    .valid('createdAt', 'enrollmentDate', 'gradeLevel', 'enrollmentStatus')
-    .default('createdAt'),
+  sortBy: Joi.string().valid('createdAt', 'enrollmentDate', 'gradeLevel', 'enrollmentStatus').default('createdAt'),
   sortOrder: Joi.string().valid('asc', 'desc').default('desc'),
 });
-
-module.exports = {
-  createStudentSchema,
-  updateStudentSchema,
-  transferStudentSchema,
-  withdrawStudentSchema,
-  queryStudentSchema,
-};
