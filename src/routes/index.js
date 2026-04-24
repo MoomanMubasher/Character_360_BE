@@ -10,6 +10,7 @@ import countryRoutes from '../modules/countries/country.routes.js';
 import stateRoutes from '../modules/states/state.routes.js';
 import countyRoutes from '../modules/counties/county.routes.js';
 import districtRoutes from '../modules/districts/district.routes.js';
+import brandingRoutes from '../modules/branding/branding.routes.js';
 
 const router = Router();
 
@@ -17,6 +18,7 @@ const API_V1 = '/api/v1';
 
 // ─── Mount Routes ────────────────────────────────────
 router.use(`${API_V1}/auth`, authRoutes);
+router.use(`${API_V1}/branding`, brandingRoutes);
 router.use(`${API_V1}/principals`, principalRoutes);
 router.use(`${API_V1}/teachers`, teacherRoutes);
 router.use(`${API_V1}/students`, studentRoutes);

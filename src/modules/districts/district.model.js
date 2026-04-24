@@ -80,6 +80,19 @@ const districtSchema = new mongoose.Schema(
       },
       timezone: { type: String, default: 'America/Detroit' },
     },
+    // ─── Branding (BASE — inherited by all schools in district) ──
+    branding: {
+      primaryColor:   { type: String, default: null },
+      secondaryColor: { type: String, default: null },
+      accentColor:    { type: String, default: null },
+      backgroundColor:{ type: String, default: null },
+      textColor:      { type: String, default: null },
+      fontFamily:     { type: String, default: null },
+      logo:           { type: String, default: null }, // URL
+      favicon:        { type: String, default: null }, // URL
+      loginBannerText:{ type: String, default: null },
+      loginSubText:   { type: String, default: null },
+    },
     status: {
       type: String,
       enum: ['active', 'inactive', 'suspended', 'trial'],
