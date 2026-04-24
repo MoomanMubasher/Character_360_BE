@@ -57,6 +57,7 @@ class CountyService {
       populate: [
         { path: 'countryId', select: 'name code' },
         { path: 'stateId', select: 'name code' },
+        { path: 'academicYearId', select: 'name' },
       ],
     });
 
@@ -64,8 +65,10 @@ class CountyService {
       const formatted = formatDoc(doc, REF_MAP);
       formatted.country_name = doc.countryId?.name || '';
       formatted.state_name = doc.stateId?.name || '';
+      formatted.academic_year_name = doc.academicYearId?.name || '';
       formatted.country_id = doc.countryId?._id?.toString() || formatted.country_id;
       formatted.state_id = doc.stateId?._id?.toString() || formatted.state_id;
+      formatted.academic_year_id = doc.academicYearId?._id?.toString() || formatted.academic_year_id;
       return formatted;
     });
 
@@ -76,14 +79,17 @@ class CountyService {
     const doc = await County.findById(id)
       .populate('countryId', 'name code')
       .populate('stateId', 'name code')
+      .populate('academicYearId', 'name')
       .lean();
     if (!doc) return null;
 
     const result = formatDoc(doc, REF_MAP);
     result.country_name = doc.countryId?.name || '';
     result.state_name = doc.stateId?.name || '';
+    result.academic_year_name = doc.academicYearId?.name || '';
     result.country_id = doc.countryId?._id?.toString() || result.country_id;
     result.state_id = doc.stateId?._id?.toString() || result.state_id;
+    result.academic_year_id = doc.academicYearId?._id?.toString() || result.academic_year_id;
     return result;
   }
 
@@ -102,6 +108,7 @@ class CountyService {
     })
       .populate('countryId', 'name code')
       .populate('stateId', 'name code')
+      .populate('academicYearId', 'name')
       .lean();
 
     if (!doc) return null;
@@ -109,8 +116,10 @@ class CountyService {
     const result = formatDoc(doc, REF_MAP);
     result.country_name = doc.countryId?.name || '';
     result.state_name = doc.stateId?.name || '';
+    result.academic_year_name = doc.academicYearId?.name || '';
     result.country_id = doc.countryId?._id?.toString() || result.country_id;
     result.state_id = doc.stateId?._id?.toString() || result.state_id;
+    result.academic_year_id = doc.academicYearId?._id?.toString() || result.academic_year_id;
     return result;
   }
 

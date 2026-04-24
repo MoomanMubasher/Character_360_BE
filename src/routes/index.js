@@ -10,6 +10,7 @@ import countryRoutes from '../modules/countries/country.routes.js';
 import stateRoutes from '../modules/states/state.routes.js';
 import countyRoutes from '../modules/counties/county.routes.js';
 import districtRoutes from '../modules/districts/district.routes.js';
+import schoolRoutes from '../modules/schools/school.routes.js';
 import brandingRoutes from '../modules/branding/branding.routes.js';
 
 const router = Router();
@@ -27,6 +28,7 @@ router.use(`${API_V1}/countries`, countryRoutes);
 router.use(`${API_V1}/states`, stateRoutes);
 router.use(`${API_V1}/counties`, countyRoutes);
 router.use(`${API_V1}/districts`, districtRoutes);
+router.use(`${API_V1}/schools`, schoolRoutes);
 
 // ─── Health Check ────────────────────────────────────
 router.get(`${API_V1}/health`, (req, res) => {

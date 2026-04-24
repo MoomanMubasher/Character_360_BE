@@ -48,7 +48,31 @@ class BrandingController {
    */
   async resolve(req, res, next) {
     try {
-      const rawCode = req.query.code;
+      const rawCode       = req.query.code;
+      const rawDistrictId = req.query.districtId;
+
+      // ── districtId param — used post-login by district_admin ─
+      if (!rawCode && rawDistrictId) {
+        const district = await District
+          .findById(rawDistrictId)
+          .select('name branding status')
+          .lean();
+
+        if (district && district.status === 'active') {
+          const merged = mergeBranding(PLATFORM_DEFAULTS, district.branding ?? {});
+          return sendSuccess(res, 200, 'District branding resolved', {
+            type:       'district',
+            orgName:    district.name,
+            orgId:      district._id,
+            districtId: district._id,
+            branding:   merged,
+          });
+        }
+
+        return sendSuccess(res, 200, 'Platform default branding', {
+          type: 'platform', orgName: null, orgId: null, branding: PLATFORM_DEFAULTS,
+        });
+      }
 
       // ── No code → platform default ───────────────────────────
       if (!rawCode) {

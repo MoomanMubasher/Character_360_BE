@@ -61,14 +61,19 @@ class StateService {
       page: query.page,
       limit: query.limit,
       sort: { name: 1 },
-      populate: { path: 'countryId', select: 'name code' },
+      populate: [
+        { path: 'countryId', select: 'name code' },
+        { path: 'academicYearId', select: 'name' },
+      ],
     });
 
     const data = result.data.map((doc) => {
       const formatted = formatDoc(doc, REF_MAP);
       formatted.country_name = doc.countryId?.name || '';
+      formatted.academic_year_name = doc.academicYearId?.name || '';
       // Replace populated object with just the ID
       formatted.country_id = doc.countryId?._id?.toString() || formatted.country_id;
+      formatted.academic_year_id = doc.academicYearId?._id?.toString() || formatted.academic_year_id;
       return formatted;
     });
 
@@ -78,12 +83,15 @@ class StateService {
   async getById(id) {
     const doc = await State.findById(id)
       .populate('countryId', 'name code')
+      .populate('academicYearId', 'name')
       .lean();
     if (!doc) return null;
 
     const result = formatDoc(doc, REF_MAP);
     result.country_name = doc.countryId?.name || '';
+    result.academic_year_name = doc.academicYearId?.name || '';
     result.country_id = doc.countryId?._id?.toString() || result.country_id;
+    result.academic_year_id = doc.academicYearId?._id?.toString() || result.academic_year_id;
     return result;
   }
 
@@ -100,13 +108,16 @@ class StateService {
       runValidators: true,
     })
       .populate('countryId', 'name code')
+      .populate('academicYearId', 'name')
       .lean();
 
     if (!doc) return null;
 
     const result = formatDoc(doc, REF_MAP);
     result.country_name = doc.countryId?.name || '';
+    result.academic_year_name = doc.academicYearId?.name || '';
     result.country_id = doc.countryId?._id?.toString() || result.country_id;
+    result.academic_year_id = doc.academicYearId?._id?.toString() || result.academic_year_id;
     return result;
   }
 
