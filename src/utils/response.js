@@ -28,3 +28,6 @@ export const sendError = (res, statusCode, message, errors = null) => {
 
   return res.status(statusCode).json(response);
 };
+
+// Alias for backward compatibility
+export const sendResponse = sendSuccess;

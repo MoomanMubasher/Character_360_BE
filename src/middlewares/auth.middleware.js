@@ -86,5 +86,6 @@ export const authenticateLight = (req, res, next) => {
   }
 };
 
-// Also export as default for backward compatibility
+// Export aliases for backward compatibility
+export const authMiddleware = authenticate;
 export default authenticate;
