@@ -14,6 +14,11 @@ import districtRoutes from '../modules/districts/district.routes.js';
 import schoolRoutes from '../modules/schools/school.routes.js';
 import departmentRoutes from '../modules/departments/department.routes.js';
 import brandingRoutes from '../modules/branding/branding.routes.js';
+import classRoutes from '../modules/classes/class.routes.js';
+import attendanceRoutes from '../modules/attendance/attendance.routes.js';
+import announcementRoutes from '../modules/announcements/announcement.routes.js';
+import assignmentRoutes from '../modules/academic/assignments/assignment.routes.js';
+import searchRoutes from '../modules/search/search.routes.js';
 
 const router = Router();
 
@@ -33,6 +38,11 @@ router.use(`${API_V1}/counties`, countyRoutes);
 router.use(`${API_V1}/districts`, districtRoutes);
 router.use(`${API_V1}/schools`, schoolRoutes);
 router.use(`${API_V1}/departments`, departmentRoutes);
+router.use(`${API_V1}/classes`, classRoutes);
+router.use(`${API_V1}/attendance`, attendanceRoutes);
+router.use(`${API_V1}/announcements`, announcementRoutes);
+router.use(`${API_V1}/assignments`, assignmentRoutes);
+router.use(`${API_V1}/search`, searchRoutes);
 
 // ─── Health Check ────────────────────────────────────
 router.get(`${API_V1}/health`, (req, res) => {

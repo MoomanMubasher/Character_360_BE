@@ -320,6 +320,151 @@ class TeacherService {
       byDesignation: designationStats.reduce((acc, c) => { acc[c._id] = c.count; return acc; }, {}),
     };
   }
+
+  // ─── Teacher Dashboard Stats ──────────────────────────────────────────────
+
+  async getDashboardStats(userId, scope) {
+    const [Class, Assignment, Announcement, Attendance] = await Promise.all([
+      import('../classes/class.model.js').then((m) => m.default),
+      import('../academic/assignments/assignment.model.js').then((m) => m.default),
+      import('../announcements/announcement.model.js').then((m) => m.default),
+      import('../attendance/attendance.model.js').then((m) => m.default),
+    ]);
+
+    const classFilter = {
+      ...scope,
+      $or: [
+        { classTeacherId: userId },
+        { 'subjectTeachers.teacherId': userId },
+      ],
+      status: 'active',
+    };
+
+    const [classes, totalStudentsAgg, upcoming, announcementsCount] = await Promise.all([
+      Class.find(classFilter).lean(),
+      Class.aggregate([
+        { $match: classFilter },
+        { $project: { count: { $size: '$students' } } },
+        { $group: { _id: null, total: { $sum: '$count' } } },
+      ]),
+      Assignment.find({
+        teacherId: userId,
+        ...scope,
+        dueDate: { $gte: new Date() },
+        status: 'published',
+      })
+        .sort({ dueDate: 1 })
+        .limit(5)
+        .populate('classId', 'name section')
+        .populate('subjectId', 'name code')
+        .lean(),
+      Announcement.countDocuments({
+        authorId: userId,
+        ...scope,
+        status: 'published',
+      }),
+    ]);
+
+    // Today attendance coverage
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const markedToday = await Attendance.countDocuments({
+      ...scope,
+      classId: { $in: classes.map((c) => c._id) },
+      date: { $gte: today },
+    });
+
+    return {
+      totalClasses: classes.length,
+      totalStudents: totalStudentsAgg[0]?.total || 0,
+      totalSubjects: [...new Set(classes.flatMap((c) => c.subjectTeachers?.map((st) => st.subjectId?.toString()) || []))].length,
+      totalAnnouncements: announcementsCount,
+      attendanceMarkedToday: markedToday,
+      classesNeedingAttendance: classes.length - markedToday,
+      upcomingAssignments: upcoming,
+    };
+  }
+
+  // ─── Teacher Calendar ─────────────────────────────────────────────────────
+
+  async getCalendarEvents(userId, scope, startDate, endDate) {
+    const [Assignment, Announcement] = await Promise.all([
+      import('../academic/assignments/assignment.model.js').then((m) => m.default),
+      import('../announcements/announcement.model.js').then((m) => m.default),
+    ]);
+
+    const dateFilter = {};
+    if (startDate) dateFilter.$gte = new Date(startDate);
+    if (endDate) dateFilter.$lte = new Date(endDate);
+
+    const [assignments, announcements] = await Promise.all([
+      Assignment.find({
+        teacherId: userId,
+        ...scope,
+        ...(Object.keys(dateFilter).length ? { dueDate: dateFilter } : {}),
+        status: { $in: ['published', 'closed'] },
+      })
+        .populate('classId', 'name section gradeLevel')
+        .populate('subjectId', 'name code')
+        .lean(),
+      Announcement.find({
+        authorId: userId,
+        ...scope,
+        status: 'published',
+        ...(Object.keys(dateFilter).length ? { createdAt: dateFilter } : {}),
+      })
+        .populate('classId', 'name section')
+        .lean(),
+    ]);
+
+    const events = [
+      ...assignments.map((a) => ({
+        id: a._id,
+        type: a.type === 'exam' ? 'Exam' : 'Assignment',
+        title: a.title,
+        subject: a.subjectId?.name || '',
+        subjectCode: a.subjectId?.code || '',
+        className: a.classId ? `${a.classId.name} ${a.classId.section || ''}`.trim() : '',
+        date: a.dueDate,
+        color: a.type === 'exam' ? '#dc2626' : '#2563eb',
+        meta: { totalPoints: a.totalPoints, type: a.type },
+      })),
+      ...announcements.map((an) => ({
+        id: an._id,
+        type: 'Announcement',
+        title: an.title,
+        subject: '',
+        className: an.classId ? `${an.classId.name} ${an.classId.section || ''}`.trim() : 'School-wide',
+        date: an.createdAt,
+        color: '#16a34a',
+        meta: { category: an.category, priority: an.priority },
+      })),
+    ];
+
+    events.sort((a, b) => new Date(a.date) - new Date(b.date));
+    return events;
+  }
+
+  // ─── Teacher Settings ─────────────────────────────────────────────────────
+
+  async getSettings(userId) {
+    const teacher = await Teacher.findOne({ userId }).select('preferences').lean();
+    return teacher?.preferences || {};
+  }
+
+  async updateSettings(userId, preferences) {
+    const teacher = await Teacher.findOneAndUpdate(
+      { userId },
+      { $set: { preferences } },
+      { new: true, runValidators: true }
+    ).select('preferences');
+    if (!teacher) {
+      const error = new Error('Teacher profile not found');
+      error.statusCode = 404;
+      throw error;
+    }
+    return teacher.preferences;
+  }
 }
 
 export default new TeacherService();

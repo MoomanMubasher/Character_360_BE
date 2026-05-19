@@ -16,6 +16,12 @@ router.use(authenticate);
 
 router.get('/me', authorize('teacher', 'teaching_assistant'), teacherController.getMyProfile);
 
+// ─── Teacher Self-Service Routes ────────────────────────────────────────────
+router.get('/me/dashboard', authorize('teacher', 'teaching_assistant'), teacherController.getDashboard);
+router.get('/me/calendar', authorize('teacher', 'teaching_assistant'), teacherController.getCalendar);
+router.get('/me/settings', authorize('teacher', 'teaching_assistant'), teacherController.getSettings);
+router.put('/me/settings', authorize('teacher', 'teaching_assistant'), teacherController.updateSettings);
+
 router.post(
   '/',
   authorize('super_admin', 'district_admin', 'school_admin'),

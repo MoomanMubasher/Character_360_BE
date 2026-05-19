@@ -189,6 +189,49 @@ class TeacherController {
       next(error);
     }
   }
+
+  // ─── Teacher Self-Service Endpoints ──────────────────────────────────────
+
+  async getDashboard(req, res, next) {
+    try {
+      const scope = { districtId: req.user.districtId, schoolId: req.user.schoolId };
+      const stats = await teacherService.getDashboardStats(req.user._id, scope);
+      return sendSuccess(res, 200, 'Dashboard stats fetched', stats);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getCalendar(req, res, next) {
+    try {
+      const scope = { districtId: req.user.districtId, schoolId: req.user.schoolId };
+      const { startDate, endDate } = req.query;
+      const events = await teacherService.getCalendarEvents(
+        req.user._id, scope, startDate, endDate
+      );
+      return sendSuccess(res, 200, 'Calendar events fetched', events);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getSettings(req, res, next) {
+    try {
+      const preferences = await teacherService.getSettings(req.user._id);
+      return sendSuccess(res, 200, 'Settings fetched', preferences);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateSettings(req, res, next) {
+    try {
+      const updated = await teacherService.updateSettings(req.user._id, req.body);
+      return sendSuccess(res, 200, 'Settings saved', updated);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new TeacherController();

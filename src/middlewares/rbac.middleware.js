@@ -1,6 +1,40 @@
 // BACKEND/src/middlewares/rbac.middleware.js
 
 import { sendError } from '../utils/response.js';
+import { getPermissionsForRole } from '../constants/roles.js';
+
+/**
+ * Check if a user has a permission, considering:
+ * 1. Base permissions derived from their roles (ROLE_PERMISSIONS)
+ * 2. Per-user customPermissions.granted (additions)
+ * 3. Per-user customPermissions.revoked (removals)
+ */
+export const resolveUserPermissions = (user) => {
+  const rolePerms = (user.roles || []).flatMap((r) => getPermissionsForRole(r));
+  const granted = user.customPermissions?.granted || [];
+  const revoked = new Set(user.customPermissions?.revoked || []);
+  const all = new Set([...rolePerms, ...granted]);
+  revoked.forEach((p) => all.delete(p));
+  return all;
+};
+
+/**
+ * Check if a user has a specific permission, using the resolved set above.
+ * Falls back to user.hasPermission() if defined on the model.
+ */
+const userHasPermission = (user, permission) => {
+  // Prefer model method if it already handles custom overrides
+  if (typeof user.hasPermission === 'function') {
+    // Also layer in role-based perms that the model method might miss
+    const rolePerms = (user.roles || []).flatMap((r) => getPermissionsForRole(r));
+    if (rolePerms.includes(permission)) {
+      const revoked = new Set(user.customPermissions?.revoked || []);
+      if (!revoked.has(permission)) return true;
+    }
+    return user.hasPermission(permission);
+  }
+  return resolveUserPermissions(user).has(permission);
+};
 
 /**
  * Role-based authorization
@@ -38,11 +72,11 @@ export const authorize = (...allowedRoles) => {
 
 /**
  * Permission-based authorization
- * Checks if user has a specific permission string
- * 
+ * Checks if user has a specific permission string (role-based + custom overrides).
+ *
  * Usage in routes:
  *   checkPermission('students:read')
- *   checkPermission('grades:write')
+ *   checkPermission(PERMISSIONS.GRADES_UPDATE)
  */
 export const checkPermission = (requiredPermission) => {
   return (req, res, next) => {
@@ -50,25 +84,12 @@ export const checkPermission = (requiredPermission) => {
       return sendError(res, 401, 'Authentication required.');
     }
 
-    // Use the user model's hasPermission method if available
-    if (typeof req.user.hasPermission === 'function') {
-      if (!req.user.hasPermission(requiredPermission)) {
-        return sendError(
-          res,
-          403,
-          `Access denied. Missing permission: ${requiredPermission}`
-        );
-      }
-    } else {
-      // Fallback: direct array check
-      const userPermissions = req.user.permissions || [];
-      if (!userPermissions.includes(requiredPermission)) {
-        return sendError(
-          res,
-          403,
-          `Access denied. Missing permission: ${requiredPermission}`
-        );
-      }
+    if (!userHasPermission(req.user, requiredPermission)) {
+      return sendError(
+        res,
+        403,
+        `Access denied. Missing permission: ${requiredPermission}`
+      );
     }
 
     next();
@@ -87,12 +108,9 @@ export const checkAllPermissions = (...requiredPermissions) => {
       return sendError(res, 401, 'Authentication required.');
     }
 
-    const missingPermissions = requiredPermissions.filter((perm) => {
-      if (typeof req.user.hasPermission === 'function') {
-        return !req.user.hasPermission(perm);
-      }
-      return !(req.user.permissions || []).includes(perm);
-    });
+    const missingPermissions = requiredPermissions.filter(
+      (perm) => !userHasPermission(req.user, perm)
+    );
 
     if (missingPermissions.length > 0) {
       return sendError(
@@ -120,10 +138,7 @@ export const checkAnyPermission = (...requiredPermissions) => {
     }
 
     const hasAny = requiredPermissions.some((perm) => {
-      if (typeof req.user.hasPermission === 'function') {
-        return req.user.hasPermission(perm);
-      }
-      return (req.user.permissions || []).includes(perm);
+      return userHasPermission(req.user, perm);
     });
 
     if (!hasAny) {
